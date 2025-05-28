@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+        <!-- dashboard.html - Update the card header -->
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2>Candidates</h2>
+        <div>
+            <a href="/job_descriptions" class="btn btn-secondary me-2">View Job Descriptions</a>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#shortlistModal">Shortlist Candidates</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Experience</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for candidate in candidates %}
+                <tr>
+                    <td>{{ candidate.full_name }}</td>
+                    <td>{{ candidate.email }}</td>
+                    <td>{{ candidate.years_experience }} years</td>
+                    <td>
+                        <span class="badge bg-{% if candidate.status == 'shortlisted' %}success{% else %}warning{% endif %}">
+                            {{ candidate.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="/candidate/{{ candidate.candidate_id }}" class="btn btn-sm btn-info">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Shortlist Modal -->
+<div class="modal fade" id="shortlistModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Shortlist Candidates</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="shortlistForm">
+                    <div class="mb-3">
+                        <label for="jobDescription" class="form-label">Job Description</label>
+                        <textarea class="form-control" id="jobDescription" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Shortlist Top 10</button>
+                </form>
+                <div id="shortlistResult" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

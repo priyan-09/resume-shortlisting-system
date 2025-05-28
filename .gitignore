@@ -1,0 +1,57 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+env/
+venv/
+ENV/
+.venv/
+.env/
+
+# Node modules
+node_modules/
+
+# Log files
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Build and distribution folders
+build/
+dist/
+*.egg-info/
+
+# Environment files
+.env
+.env.*
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Compiled files
+*.class
+*.o
+*.so
+*.out
+
+# Test coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Temporary files
+*.tmp
+*.swp
+*.bak
+*.orig
+*.old

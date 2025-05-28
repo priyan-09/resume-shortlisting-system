@@ -1,0 +1,49 @@
+<!-- templates/job_description.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Job Description #{{ job_description.id }}</h2>
+    </div>
+    <div class="card-body">
+        <div class="mb-4">
+            <h4>Description</h4>
+            <div class="p-3 bg-light rounded">{{ job_description.description }}</div>
+        </div>
+        
+        <h4>Shortlisted Candidates ({{ shortlisted_candidates|length }})</h4>
+        {% if shortlisted_candidates %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Experience</th>
+                    <th>Score</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for candidate in shortlisted_candidates %}
+                <tr>
+                    <td>{{ candidate.candidate.full_name }}</td>
+                    <td>{{ candidate.candidate.email }}</td>
+                    <td>{{ candidate.candidate.years_experience }} years</td>
+                    <td>{{ "%.2f"|format(candidate.score) if candidate.score else 'N/A' }}</td>
+                    <td>
+                        <a href="/candidate/{{ candidate.candidate.candidate_id }}" class="btn btn-sm btn-info">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No candidates shortlisted for this job description.</p>
+        {% endif %}
+    </div>
+    <div class="card-footer">
+        <a href="/job_descriptions" class="btn btn-secondary">Back to List</a>
+    </div>
+</div>
+{% endblock %}

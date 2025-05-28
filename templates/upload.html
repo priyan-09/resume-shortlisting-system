@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Upload Resume</h2>
+                </div>
+                <div class="card-body">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="mb-4">
+                            <label for="resume" class="form-label fw-bold">Select Resume</label>
+                            <input class="form-control form-control-lg" 
+                                   type="file" 
+                                   id="resume" 
+                                   name="resume" 
+                                   accept=".pdf,.docx,.doc,.txt" 
+                                   required>
+                            <div class="form-text">
+                                Supported formats: PDF, DOCX, DOC, or TXT (Max 5MB)
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary btn-lg px-4">
+                                <i class="bi bi-upload me-2"></i>Upload Resume
+                            </button>
+                            <a href="/candidates" class="btn btn-outline-secondary btn-lg px-4">
+                                <i class="bi bi-people me-2"></i>View Candidates
+                            </a>
+                        </div>
+                    </form>
+                    
+                    <div id="message" class="mt-4"></div>
+                </div>
+            </div>
+            
+            <div class="card shadow mt-4">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0">Recent Uploads</h3>
+                </div>
+                <div class="card-body">
+                    <div class="list-group" id="recentUploads">
+                        <div class="text-center py-3 text-muted">
+                            No recent uploads yet
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
