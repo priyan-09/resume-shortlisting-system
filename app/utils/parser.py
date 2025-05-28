@@ -154,6 +154,41 @@ def parse_resume(file_path, file_extension):
             if 1900 < year < current_year:
                 experience_years = max(experience_years, current_year - year)
     
+    # Extract education information
+    education = []
+    education_keywords = ['university', 'college', 'institute', 'school', 'bachelor', 'master', 'phd', 'degree']
+    for org in entities['ORG']:
+        if any(keyword in org.lower() for keyword in education_keywords):
+            education.append({
+                'institution': org,
+                'degree': '',  # Will be filled by the degree extraction below
+                'year': ''      # Will be filled by the year extraction below
+            })
+    
+    # Extract degrees and years from text
+    degree_patterns = [
+        r'(Bachelor.*?|Master.*?|PhD.*?|.*?Degree)\s*(?:in|of)?\s*([^\n,;]+)',
+        r'(.*?)\s*(?:from|at)\s*(.*?University|.*?College|.*?Institute)'
+    ]
+    
+    for pattern in degree_patterns:
+        matches = re.finditer(pattern, text, re.IGNORECASE)
+        for match in matches:
+            degree = match.group(1).strip()
+            institution = match.group(2).strip() if len(match.groups()) > 1 else ""
+            
+            # Find year in the surrounding text
+            year_match = re.search(r'\b(19|20)\d{2}\b', match.group(0))
+            year = year_match.group() if year_match else ""
+            
+            # Add to education if not already present
+            if institution and not any(edu['institution'] == institution for edu in education):
+                education.append({
+                    'institution': institution,
+                    'degree': degree,
+                    'year': year
+                })
+    
     # Prepare structured data
     data = {
         'full_name': entities['PERSON'][0] if entities['PERSON'] else "",
@@ -161,8 +196,10 @@ def parse_resume(file_path, file_extension):
         'phone': entities['PHONE'][0] if entities['PHONE'] else "",
         'location': entities['GPE'][0] if entities['GPE'] else "",
         'years_experience': min(experience_years, 30),  # Cap at 30 years
-        'education': [],
-        'skills': [{'name': skill, 'category': 'technical'} for skill in entities['ORG']],
+        'education': education,
+        'skills': [{'name': org, 'category': 'technical'} 
+                  for org in entities['ORG'] 
+                  if not any(keyword in org.lower() for keyword in education_keywords)],
         'work_experience': work_experiences
     }
     
