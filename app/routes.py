@@ -192,53 +192,57 @@ def job_description_detail(jd_id):
                          shortlisted_candidates=shortlisted_candidates)
 
 
-# @bp.route('/candidate/<int:candidate_id>/delete', methods=['POST'])
-# def delete_candidate(candidate_id):
-#     candidate = Candidate.query.get_or_404(candidate_id)
+@bp.route('/candidate/<int:candidate_id>/delete', methods=['POST'])
+def delete_candidate(candidate_id):
+    candidate = Candidate.query.get_or_404(candidate_id)
     
-#     try:
-#         # Delete from S3 first
-#         from .utils.file_processor import get_s3_client
-#         s3_client = get_s3_client()
-#         if s3_client and candidate.resume_file_path:
-#             try:
-#                 s3_client.delete_object(
-#                     Bucket=Config.S3_BUCKET_NAME,
-#                     Key=candidate.resume_file_path
-#                 )
-#             except Exception as e:
-#                 logger.error(f"Error deleting resume from S3: {e}")
-#                 # Continue with DB deletion even if S3 delete fails
+    try:
+        # Delete from S3 first
+        from .utils.file_processor import get_s3_client
+        s3_client = get_s3_client()
+        if s3_client and candidate.resume_file_path:
+            try:
+                s3_client.delete_object(
+                    Bucket=Config.S3_BUCKET_NAME,
+                    Key=candidate.resume_file_path
+                )
+            except Exception as e:
+                logger.error(f"Error deleting resume from S3: {e}")
+                # Continue with DB deletion even if S3 delete fails
         
-#         # Delete from database
-#         db.session.delete(candidate)
-#         db.session.commit()
+        # Delete from database
+        db.session.delete(candidate)
+        db.session.commit()
         
-#         return jsonify({
-#             'success': True,
-#             'message': f'Candidate {candidate.full_name} deleted successfully'
-#         })
-#     except Exception as e:
-#         db.session.rollback()
-#         return jsonify({
-#             'success': False,
-#             'error': f'Failed to delete candidate: {str(e)}'
-#         }), 500
+        return jsonify({
+            'success': True,
+            'message': f'Candidate {candidate.full_name} deleted successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Failed to delete candidate: {str(e)}'
+        }), 500
 
-# @bp.route('/job_description/<int:jd_id>/delete', methods=['POST'])
-# def delete_job_description(jd_id):
-#     jd = JobDescription.query.get_or_404(jd_id)
+@bp.route('/job_description/<int:jd_id>/delete', methods=['POST'])
+def delete_job_description(jd_id):
+    jd = JobDescription.query.get_or_404(jd_id)
     
-#     try:
-#         db.session.delete(jd)
-#         db.session.commit()
-#         return jsonify({
-#             'success': True,
-#             'message': f'Job Description #{jd_id} deleted successfully'
-#         })
-#     except Exception as e:
-#         db.session.rollback()
-#         return jsonify({
-#             'success': False,
-#             'error': f'Failed to delete job description: {str(e)}'
-#         }), 500
+    try:
+        # First delete all associated shortlist records
+        Shortlist.query.filter_by(job_description_id=jd_id).delete()
+        
+        # Then delete the job description
+        db.session.delete(jd)
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': f'Job Description #{jd_id} deleted successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Failed to delete job description: {str(e)}'
+        }), 500

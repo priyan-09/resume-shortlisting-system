@@ -43,7 +43,13 @@
         {% endif %}
     </div>
     <div class="card-footer">
-        <a href="/job_descriptions" class="btn btn-secondary">Back to List</a>
-    </div>
+    <a href="/job_descriptions" class="btn btn-secondary">Back to List</a>
+    <button class="btn btn-danger float-end delete-btn"
+            data-type="job_description"
+            data-id="{{ job_description.id }}"
+            data-name="Job Description #{{ job_description.id }}">
+        Delete Job Description
+    </button>
+</div>
 </div>
 {% endblock %}

@@ -32,9 +32,16 @@
                             {{ candidate.status }}
                         </span>
                     </td>
+                    
                     <td>
-                        <a href="/candidate/{{ candidate.candidate_id }}" class="btn btn-sm btn-info">View</a>
-                    </td>
+    <a href="/candidate/{{ candidate.candidate_id }}" class="btn btn-sm btn-info">View</a>
+    <button class="btn btn-sm btn-danger ms-2 delete-btn"
+            data-type="candidate"
+            data-id="{{ candidate.candidate_id }}"
+            data-name="{{ candidate.full_name }}">
+        Delete
+    </button>
+</td>
                 </tr>
                 {% endfor %}
             </tbody>

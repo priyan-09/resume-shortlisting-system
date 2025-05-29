@@ -196,3 +196,64 @@ document.addEventListener('DOMContentLoaded', function() {
     setupUploadForm();
     setupShortlistForm();
 });
+// Delete functionality using data attributes
+function setupDeleteButtons() {
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.dataset.type;
+            const id = this.dataset.id;
+            const name = this.dataset.name;
+            
+            if (confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
+                deleteItem(type, id, name);
+            }
+        });
+    });
+}
+
+async function deleteItem(type, id, name) {
+    const url = `/${type}/${id}/delete`;
+    const btn = document.querySelector(`.delete-btn[data-id="${id}"]`);
+    
+    try {
+        // Show loading state
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+        btn.disabled = true;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show success message and redirect
+            alert(data.message);
+            if (type === 'candidate') {
+                window.location.href = '/candidates';
+            } else {
+                window.location.href = '/job_descriptions';
+            }
+        } else {
+            // Reset button state
+            btn.innerHTML = 'Delete';
+            btn.disabled = false;
+            alert(`Error: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        btn.innerHTML = 'Delete';
+        btn.disabled = false;
+        alert('Failed to delete. Please try again.');
+    }
+}
+
+// Add to your DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', function() {
+    setupUploadForm();
+    setupShortlistForm();
+    setupDeleteButtons();  // Add this line
+});

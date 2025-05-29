@@ -59,8 +59,14 @@
             </div>
         </div>
     </div>
-    <div class="card-footer">
-        <a href="/candidates" class="btn btn-secondary">Back to List</a>
-    </div>
+   <div class="card-footer">
+    <a href="/candidates" class="btn btn-secondary">Back to List</a>
+    <button class="btn btn-danger float-end delete-btn" 
+            data-type="candidate"
+            data-id="{{ candidate.candidate_id }}"
+            data-name="{{ candidate.full_name }}">
+        Delete Candidate
+    </button>
+</div>
 </div>
 {% endblock %}
