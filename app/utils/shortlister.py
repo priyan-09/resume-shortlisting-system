@@ -23,8 +23,11 @@ def calculate_similarity(job_description, candidate_data):
     
     return similarity
 
-def rank_candidates(job_description, candidates_data, top_n=10):
-    """Rank candidates based on similarity to job description"""
+def rank_candidates(job_description, candidates_data, top_percent=10):
+    """Rank candidates based on similarity to job description and return top X%"""
+    if not candidates_data:
+        return []
+    
     ranked = []
     
     for candidate in candidates_data:
@@ -38,4 +41,8 @@ def rank_candidates(job_description, candidates_data, top_n=10):
     # Sort by similarity score (descending)
     ranked.sort(key=lambda x: x['similarity_score'], reverse=True)
     
-    return ranked[:top_n]
+    # Calculate how many candidates make up the top percentage
+    total_candidates = len(ranked)
+    top_count = max(1, round(total_candidates * (top_percent / 100)))
+    
+    return ranked[:top_count]

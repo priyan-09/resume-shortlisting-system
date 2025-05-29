@@ -31,7 +31,12 @@ function setupUploadForm() {
             const data = await response.json();
             
             if (data.error) {
-                showAlert(messageDiv, 'danger', data.error);
+                // Handle duplicate email error specially
+                if (response.status === 409 && data.existing_candidate_id) {
+                    showDuplicateEmailError(messageDiv, data);
+                } else {
+                    showAlert(messageDiv, 'danger', data.error);
+                }
             } else {
                 showSuccessMessage(data);
                 uploadForm.reset();
@@ -97,27 +102,64 @@ function showAlert(container, type, message) {
     `;
 }
 
+function showDuplicateEmailError(container, data) {
+    container.innerHTML = `
+        <div class="alert alert-warning alert-dismissible fade show">
+            <h4 class="alert-heading">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>Duplicate Email Found
+            </h4>
+            <p><strong>${data.error}</strong></p>
+            <p class="mb-0">
+                Existing candidate: <strong>${data.existing_candidate_name}</strong>
+            </p>
+            <hr>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted">Would you like to view the existing candidate instead?</span>
+                <div>
+                    <a href="/candidate/${data.existing_candidate_id}" class="btn btn-sm btn-warning">
+                        <i class="bi bi-person-fill me-1"></i>View Existing Candidate
+                    </a>
+                    <a href="/candidates" class="btn btn-sm btn-outline-secondary ms-2">
+                        <i class="bi bi-people-fill me-1"></i>View All Candidates
+                    </a>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+}
+
 function showSuccessMessage(data) {
     const messageDiv = document.getElementById('message');
     messageDiv.innerHTML = `
         <div class="alert alert-success alert-dismissible fade show">
-            <h4 class="alert-heading">Success!</h4>
-            <p>Resume processed successfully for candidate: ${data.full_name || 'Unknown'}</p>
+            <h4 class="alert-heading">
+                <i class="bi bi-check-circle-fill me-2"></i>Success!
+            </h4>
+            <p>Resume processed successfully for candidate: <strong>${data.full_name || 'Unknown'}</strong></p>
+            <p class="mb-0">
+                <small class="text-muted">
+                    Email: ${data.email || 'N/A'} | Experience: ${data.years_experience || '0'} years
+                </small>
+            </p>
             <hr>
             <div class="d-flex justify-content-between">
                 <a href="/candidate/${data.candidate_id}" class="btn btn-sm btn-success">
-                    View Candidate Details
+                    <i class="bi bi-person-fill me-1"></i>View Candidate Details
                 </a>
                 <button onclick="location.reload()" class="btn btn-sm btn-outline-success">
-                    Upload Another
+                    <i class="bi bi-upload me-1"></i>Upload Another
                 </button>
             </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
 }
 
 function addRecentUpload(data) {
     const recentUploads = document.getElementById('recentUploads');
+    if (!recentUploads) return;
+    
     const noUploadsMsg = recentUploads.querySelector('.text-center');
     
     if (noUploadsMsg) {
@@ -132,13 +174,21 @@ function addRecentUpload(data) {
     uploadItem.innerHTML = `
         <div class="d-flex w-100 justify-content-between">
             <h5 class="mb-1">${data.full_name || 'New Candidate'}</h5>
-            <small>${uploadTime}</small>
+            <small class="text-success">${uploadTime}</small>
         </div>
         <p class="mb-1">${data.email || 'No email provided'}</p>
-        <small class="text-muted">${data.years_experience || '0'} years experience</small>
+        <small class="text-muted">
+            <i class="bi bi-briefcase me-1"></i>${data.years_experience || '0'} years experience
+        </small>
     `;
     
     recentUploads.insertBefore(uploadItem, recentUploads.firstChild);
+    
+    // Limit to 5 recent uploads
+    const items = recentUploads.querySelectorAll('.list-group-item-action');
+    if (items.length > 5) {
+        recentUploads.removeChild(items[items.length - 1]);
+    }
 }
 
 // Initialize all event listeners when DOM is loaded
