@@ -37,6 +37,3 @@ unittest2==1.1.0
 
 # Additional dependencies for spaCy
 # Run after pip install: python -m spacy download en_core_web_lg
-
-# Optional: For better performance with sentence-transformers
-# sentencepiece==0.1.99
