@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 from app.utils.file_processor import upload_to_s3
 from dotenv import load_dotenv
-# Locate and print the path to the .env file
 print(f"Loaded .env from: {os.path.abspath('.env')}")
 load_dotenv()
 
@@ -46,7 +45,6 @@ def test_s3_connection():
             try:
                 s3.head_bucket(Bucket=Config.S3_BUCKET_NAME)
                 print("You have permission to access this bucket")
-                # test_upload.py
 
 
                 # Test with a sample file

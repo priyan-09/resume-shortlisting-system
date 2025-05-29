@@ -51,7 +51,6 @@ def upload_resume():
             # Normalize email
             normalized_email = parsed_data['email'].lower().strip()
             
-            # Upload to S3 first (we'll clean up if there's a duplicate)
             file.seek(0)  # Reset file pointer
             file_key = upload_to_s3(file, secure_filename(file.filename))
             if not file_key:
@@ -60,7 +59,6 @@ def upload_resume():
             # Start a database transaction
             try:
                 # Check for existing candidate within the same transaction
-                # Using SELECT FOR UPDATE would be ideal, but let's use a simpler approach
                 existing_candidate = db.session.query(Candidate).filter(
                     db.func.lower(Candidate.email) == normalized_email
                 ).with_for_update().first()
@@ -87,7 +85,7 @@ def upload_resume():
                 )
                 
                 db.session.add(candidate)
-                db.session.flush()  # Get the candidate_id without committing
+                db.session.flush()  
                 
                 # Add education records
                 for edu in parsed_data.get('education', []):

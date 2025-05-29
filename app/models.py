@@ -20,7 +20,6 @@ class Candidate(db.Model):
     skills = db.relationship('Skill', backref='candidate', lazy=True, cascade='all, delete-orphan')
     
     def __init__(self, **kwargs):
-        # Normalize email to lowercase on creation
         if 'email' in kwargs:
             kwargs['email'] = kwargs['email'].lower().strip()
         super().__init__(**kwargs)
@@ -52,7 +51,7 @@ class Skill(db.Model):
     skill_category = db.Column(db.String(20))
     proficiency_level = db.Column(db.String(20))
 
-# models.py - Add this new model
+
 class JobDescription(db.Model):
     __tablename__ = 'job_descriptions'
     

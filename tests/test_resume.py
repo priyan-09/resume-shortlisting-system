@@ -1,16 +1,13 @@
-# test_improved_resume.py
 import sys
 from pathlib import Path
 import json
 
-# Add the project root to Python path
 sys.path.append(str(Path(__file__).parent.parent / "app" / "utils"))
 
 # Import the improved parser
 from parser import parse_resume
 
 def test_resume_parsing():
-    # Test with your sample PDF resume
     result = parse_resume("D:\Btech\Resume Processing System\Resumes\Resumes\Resume 2.docx", 'docx')
     
     if result:

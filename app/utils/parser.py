@@ -44,7 +44,6 @@ def extract_work_experience(text):
         if not line:
             continue
             
-        # Check if line matches job title pattern (often in bold/caps or followed by company)
         for pattern in experience_patterns:
             match = re.search(pattern, line)
             if match:
@@ -52,7 +51,7 @@ def extract_work_experience(text):
                 
                 # Extract responsibilities from following lines starting with •
                 responsibilities = []
-                for j in range(i + 1, min(i + 10, len(lines))):  # Look at next 10 lines
+                for j in range(i + 1, min(i + 10, len(lines))):  
                     next_line = lines[j].strip()
                     if next_line.startswith('•'):
                         responsibilities.append(next_line[1:].strip())
@@ -67,9 +66,7 @@ def extract_work_experience(text):
                 })
                 break
     
-    # If no matches found with patterns, try a different approach
     if not work_experiences:
-        # Look for lines that might be job titles (followed by company info)
         job_sections = re.findall(
             r'((?:Senior |Junior |Lead )?(?:Software Engineer|Developer|Analyst|Manager|Director|Consultant)[^\n]*)\s*\|\s*([^\n]*)\s*\|\s*([^\n]*)',
             text, re.IGNORECASE
@@ -161,8 +158,8 @@ def parse_resume(file_path, file_extension):
         if any(keyword in org.lower() for keyword in education_keywords):
             education.append({
                 'institution': org,
-                'degree': '',  # Will be filled by the degree extraction below
-                'year': ''      # Will be filled by the year extraction below
+                'degree': '',  
+                'year': ''      
             })
     
     # Extract degrees and years from text

@@ -16,7 +16,6 @@ class TestShortlistingSystem(unittest.TestCase):
         - Experience with database systems
         """
         
-        # Expected test files (should exist in test_resumes/)
         cls.expected_files = [
             "software_engineer.docx",
             "data_scientist.pdf",
