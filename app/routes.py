@@ -119,8 +119,11 @@ def candidate_detail(candidate_id):
     candidate = Candidate.query.get_or_404(candidate_id)
     educations = Education.query.filter_by(candidate_id=candidate_id).all()
     skills = Skill.query.filter_by(candidate_id=candidate_id).all()
-    return render_template('candidate.html', candidate=candidate, educations=educations, skills=skills)
-
+    return render_template('candidate.html', 
+                         candidate=candidate, 
+                         educations=educations, 
+                         skills=skills,
+                         get_s3_url=get_s3_url)  # Add this line
 # routes.py - Update the shortlist endpoint
 @bp.route('/shortlist', methods=['POST'])
 def shortlist_candidates():

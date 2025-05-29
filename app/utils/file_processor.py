@@ -56,5 +56,14 @@ def upload_to_s3(file, filename):
         return None
 
 def get_s3_url(file_key):
-    """Generate S3 URL for the file"""
+    """Generate proper S3 URL for the file"""
+    if not file_key:
+        logger.error("No file key provided")
+        return None
+    
+    if not all([Config.S3_BUCKET_NAME, Config.S3_REGION]):
+        logger.error("Missing S3 configuration")
+        return None
+    
+    # Use virtual-hosted style URL (recommended)
     return f"https://{Config.S3_BUCKET_NAME}.s3.{Config.S3_REGION}.amazonaws.com/{file_key}"

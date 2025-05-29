@@ -21,8 +21,8 @@
             </div>
             <div class="col-md-6">
                 <h4>Resume</h4>
-                <a href="https://{{ candidate.resume_file_path.split('/')[0] }}.s3.amazonaws.com/{{ candidate.resume_file_path }}" 
-                   class="btn btn-primary" target="_blank">View Resume</a>
+               <a href="{{ get_s3_url(candidate.resume_file_path) }}" 
+   class="btn btn-primary" target="_blank">View Resume</a>
             </div>
         </div>
         
