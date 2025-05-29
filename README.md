@@ -1,4 +1,4 @@
-# Resume Shortlisting system using NLP
+# Resume Shortlisting System Using NLP
 
 ## Overview
 
@@ -32,7 +32,7 @@ This application is a comprehensive solution for parsing resumes, managing candi
 ### Prerequisites
 
 * Python 3.8+
-* PostgreSQL (or compatible database)
+* PostgreSQL
 * AWS account (for S3 storage)
 * Git
 
@@ -48,7 +48,7 @@ This application is a comprehensive solution for parsing resumes, managing candi
 2. **Create PostgreSQL Database Using Schema File**:
 
    * Open **pgAdmin** or any PostgreSQL client
-   * Create a new empty database (e.g., `resume_parser`)
+   * Create a new empty database
    * Open the `schema.sql` file located in the repository
    * Run the SQL script on the newly created database to create all required tables and relationships
 
@@ -81,7 +81,7 @@ This application is a comprehensive solution for parsing resumes, managing candi
    DB_PASSWORD=your_db_password
    DB_HOST=localhost
    DB_PORT=5432
-   DB_NAME=resume_parser
+   DB_NAME=your_db_name
 
    # AWS S3
    AWS_ACCESS_KEY_ID=your_aws_key
@@ -89,9 +89,6 @@ This application is a comprehensive solution for parsing resumes, managing candi
    S3_BUCKET_NAME=your-bucket-name
    S3_REGION=your-region
 
-   # Flask
-   FLASK_SECRET_KEY=your-secret-key
-   ```
 
 
 
