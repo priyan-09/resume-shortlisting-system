@@ -7,7 +7,7 @@ class Candidate(db.Model):
     
     candidate_id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False, index=True)
     phone = db.Column(db.String(20))
     location = db.Column(db.String(100))
     years_experience = db.Column(db.Integer)
@@ -16,8 +16,22 @@ class Candidate(db.Model):
     created_at = db.Column(db.TIMESTAMP, server_default=db.func.current_timestamp())
     updated_at = db.Column(db.TIMESTAMP, server_default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
     
-    educations = db.relationship('Education', backref='candidate', lazy=True)
-    skills = db.relationship('Skill', backref='candidate', lazy=True)
+    educations = db.relationship('Education', backref='candidate', lazy=True, cascade='all, delete-orphan')
+    skills = db.relationship('Skill', backref='candidate', lazy=True, cascade='all, delete-orphan')
+    
+    def __init__(self, **kwargs):
+        # Normalize email to lowercase on creation
+        if 'email' in kwargs:
+            kwargs['email'] = kwargs['email'].lower().strip()
+        super().__init__(**kwargs)
+    
+    @classmethod
+    def find_by_email(cls, email):
+        """Find candidate by email (case-insensitive)"""
+        return cls.query.filter(db.func.lower(cls.email) == email.lower().strip()).first()
+    
+    def __repr__(self):
+        return f'<Candidate {self.full_name} ({self.email})>'
 
 class Education(db.Model):
     __tablename__ = 'education'

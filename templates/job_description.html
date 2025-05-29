@@ -34,8 +34,17 @@
                     <td>
                         <a href="/candidate/{{ candidate.candidate.candidate_id }}" class="btn btn-sm btn-info">View</a>
                     </td>
+                    <td>
+                        <button class="btn btn-sm btn-danger ms-2 delete-btn"
+                                data-type="shortlist"
+                                data-id="{{ candidate.id }}"
+                                data-name="{{ candidate.candidate.full_name }}">
+                            Remove
+                        </button>
+                    </td>
                 </tr>
                 {% endfor %}
+               
             </tbody>
         </table>
         {% else %}

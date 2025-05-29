@@ -8,8 +8,11 @@ from .utils.shortlister import rank_candidates
 from datetime import datetime
 import tempfile
 from .config import Config
+from sqlalchemy.exc import IntegrityError
+import logging
 
 bp = Blueprint('main', __name__)
+logger = logging.getLogger(__name__)
 
 @bp.route('/')
 def index():
@@ -30,6 +33,8 @@ def upload_resume():
         return jsonify({'error': 'Unsupported file type'}), 400
     
     temp_file_path = None
+    file_key = None
+    
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as temp_file:
             temp_file_path = temp_file.name
@@ -40,74 +45,136 @@ def upload_resume():
             if not parsed_data:
                 return jsonify({'error': 'Failed to parse resume'}), 500
             
-            # Check if email already exists
-            existing_candidate = Candidate.query.filter_by(email=parsed_data['email']).first()
-            if existing_candidate:
-                return jsonify({
-                    'error': f'A candidate with email {parsed_data["email"]} already exists',
-                    'existing_candidate_id': existing_candidate.candidate_id,
-                    'existing_candidate_name': existing_candidate.full_name
-                }), 409  # 409 Conflict status code
+            if not parsed_data.get('email'):
+                return jsonify({'error': 'No email found in resume'}), 400
             
-            # Only upload to S3 if candidate doesn't exist
+            # Normalize email
+            normalized_email = parsed_data['email'].lower().strip()
+            
+            # Upload to S3 first (we'll clean up if there's a duplicate)
             file.seek(0)  # Reset file pointer
             file_key = upload_to_s3(file, secure_filename(file.filename))
             if not file_key:
                 return jsonify({'error': 'Failed to upload to cloud storage'}), 500
             
-            # Save to database
-            candidate = Candidate(
-                full_name=parsed_data['full_name'],
-                email=parsed_data['email'],
-                phone=parsed_data['phone'],
-                location=parsed_data['location'],
-                years_experience=parsed_data['years_experience'],
-                resume_file_path=file_key,
-                status='pending'
-            )
-            
-            db.session.add(candidate)
-            db.session.commit()
-            
-            # Add education
-            for edu in parsed_data.get('education', []):
-                education = Education(
-                    candidate_id=candidate.candidate_id,
-                    degree=edu.get('degree', ''),
-                    institution=edu.get('institution', ''),
-                    graduation_year=edu.get('graduation_year'),
-                    gpa=edu.get('gpa')
+            # Start a database transaction
+            try:
+                # Check for existing candidate within the same transaction
+                # Using SELECT FOR UPDATE would be ideal, but let's use a simpler approach
+                existing_candidate = db.session.query(Candidate).filter(
+                    db.func.lower(Candidate.email) == normalized_email
+                ).with_for_update().first()
+                
+                if existing_candidate:
+                    # Clean up the uploaded file since we won't use it
+                    cleanup_s3_file(file_key)
+                    db.session.rollback()
+                    return jsonify({
+                        'error': f'A candidate with email {parsed_data["email"]} already exists',
+                        'existing_candidate_id': existing_candidate.candidate_id,
+                        'existing_candidate_name': existing_candidate.full_name
+                    }), 409
+                
+                # Create candidate record with normalized email
+                candidate = Candidate(
+                    full_name=parsed_data['full_name'],
+                    email=normalized_email,
+                    phone=parsed_data['phone'],
+                    location=parsed_data['location'],
+                    years_experience=parsed_data['years_experience'],
+                    resume_file_path=file_key,
+                    status='pending'
                 )
-                db.session.add(education)
+                
+                db.session.add(candidate)
+                db.session.flush()  # Get the candidate_id without committing
+                
+                # Add education records
+                for edu in parsed_data.get('education', []):
+                    education = Education(
+                        candidate_id=candidate.candidate_id,
+                        degree=edu.get('degree', ''),
+                        institution=edu.get('institution', ''),
+                        graduation_year=edu.get('graduation_year'),
+                        gpa=edu.get('gpa')
+                    )
+                    db.session.add(education)
+                
+                # Add skill records
+                for skill_data in parsed_data.get('skills', []):
+                    skill = Skill(
+                        candidate_id=candidate.candidate_id,
+                        skill_name=skill_data.get('name', ''),
+                        skill_category=skill_data.get('category', 'technical'),
+                        proficiency_level=skill_data.get('proficiency', 'intermediate')
+                    )
+                    db.session.add(skill)
+                
+                # Commit all changes
+                db.session.commit()
+                
+                return jsonify({
+                    'message': 'Resume processed successfully',
+                    'candidate_id': candidate.candidate_id,
+                    'full_name': candidate.full_name,
+                    'email': candidate.email,
+                    'years_experience': candidate.years_experience
+                }), 201
+                
+            except IntegrityError as e:
+                db.session.rollback()
+                cleanup_s3_file(file_key)
+                
+                # Check if it's specifically an email unique constraint violation
+                if 'candidates_email_key' in str(e) or ('unique constraint' in str(e).lower() and 'email' in str(e).lower()):
+                    # Find the existing candidate to return proper error info
+                    existing_candidate = db.session.query(Candidate).filter(
+                        db.func.lower(Candidate.email) == normalized_email
+                    ).first()
+                    
+                    if existing_candidate:
+                        return jsonify({
+                            'error': f'A candidate with email {parsed_data["email"]} already exists',
+                            'existing_candidate_id': existing_candidate.candidate_id,
+                            'existing_candidate_name': existing_candidate.full_name
+                        }), 409
+                    else:
+                        return jsonify({
+                            'error': f'A candidate with email {parsed_data["email"]} already exists'
+                        }), 409
+                else:
+                    # Some other integrity error
+                    logger.error(f"Database integrity error: {str(e)}")
+                    return jsonify({'error': f'Database error: {str(e)}'}), 500
             
-            # Add skills
-            for skill in parsed_data.get('skills', []):
-                skill = Skill(
-                    candidate_id=candidate.candidate_id,
-                    skill_name=skill.get('name', ''),
-                    skill_category=skill.get('category', 'technical'),
-                    proficiency_level=skill.get('proficiency', 'intermediate')
-                )
-                db.session.add(skill)
-            
-            db.session.commit()
-            
-            return jsonify({
-                'message': 'Resume processed successfully',
-                'candidate_id': candidate.candidate_id,
-                'full_name': candidate.full_name,
-                'email': candidate.email,
-                'years_experience': candidate.years_experience
-            }), 201
+            except Exception as e:
+                db.session.rollback()
+                cleanup_s3_file(file_key)
+                logger.error(f"Unexpected error during candidate creation: {str(e)}")
+                return jsonify({'error': f'An error occurred: {str(e)}'}), 500
             
     except Exception as e:
-        # If any error occurs, rollback the database session
-        db.session.rollback()
+        logger.error(f"Error processing resume: {str(e)}")
+        cleanup_s3_file(file_key)
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500
     finally:
-        # Clean up temp file
         if temp_file_path and os.path.exists(temp_file_path):
             os.unlink(temp_file_path)
+
+def cleanup_s3_file(file_key):
+    """Helper function to clean up S3 file on error"""
+    if file_key:
+        try:
+            from .utils.file_processor import get_s3_client
+            s3_client = get_s3_client()
+            if s3_client:
+                s3_client.delete_object(
+                    Bucket=Config.S3_BUCKET_NAME,
+                    Key=file_key
+                )
+                logger.info(f"Cleaned up S3 file: {file_key}")
+        except Exception as cleanup_error:
+            logger.error(f"Failed to cleanup S3 file {file_key}: {str(cleanup_error)}")
 
 @bp.route('/candidates')
 def list_candidates():
@@ -123,8 +190,8 @@ def candidate_detail(candidate_id):
                          candidate=candidate, 
                          educations=educations, 
                          skills=skills,
-                         get_s3_url=get_s3_url)  # Add this line
-# routes.py - Update the shortlist endpoint
+                         get_s3_url=get_s3_url)
+
 @bp.route('/shortlist', methods=['POST'])
 def shortlist_candidates():
     job_description_text = request.form.get('job_description', '')
@@ -177,13 +244,11 @@ def shortlist_candidates():
         'shortlisted_count': len(top_candidates)
     })
 
-# Add new route to view job descriptions
 @bp.route('/job_descriptions')
 def list_job_descriptions():
     job_descriptions = JobDescription.query.order_by(JobDescription.created_at.desc()).all()
     return render_template('job_descriptions.html', job_descriptions=job_descriptions)
 
-# routes.py
 @bp.route('/job_description/<int:jd_id>')
 def job_description_detail(jd_id):
     job_description = JobDescription.query.get_or_404(jd_id)
@@ -193,7 +258,6 @@ def job_description_detail(jd_id):
     return render_template('job_description.html', 
                          job_description=job_description,
                          shortlisted_candidates=shortlisted_candidates)
-
 
 @bp.route('/candidate/<int:candidate_id>/delete', methods=['POST'])
 def delete_candidate(candidate_id):
@@ -248,4 +312,23 @@ def delete_job_description(jd_id):
         return jsonify({
             'success': False,
             'error': f'Failed to delete job description: {str(e)}'
+        }), 500
+    
+@bp.route('/shortlist/<int:shortlist_id>/delete', methods=['POST'])
+def delete_shortlist(shortlist_id):
+    shortlist = Shortlist.query.get_or_404(shortlist_id)
+    
+    try:
+        db.session.delete(shortlist)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Shortlist record deleted successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Failed to delete shortlist record: {str(e)}'
         }), 500

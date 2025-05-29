@@ -8,19 +8,28 @@ function setupUploadForm() {
         
         const submitBtn = uploadForm.querySelector('button[type="submit"]');
         const originalBtnText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-        submitBtn.disabled = true;
-        
-        const formData = new FormData();
         const fileInput = document.getElementById('resume');
         const messageDiv = document.getElementById('message');
         
+        // Clear any previous messages
+        messageDiv.innerHTML = '';
+        
+        // Show loading state
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+        submitBtn.disabled = true;
+        
         try {
+            // Validate file selection
+            if (!fileInput.files || fileInput.files.length === 0) {
+                throw new Error('Please select a file to upload');
+            }
+            
             // Validate file size (5MB max)
             if (fileInput.files[0].size > 5 * 1024 * 1024) {
                 throw new Error('File size exceeds 5MB limit');
             }
             
+            const formData = new FormData();
             formData.append('resume', fileInput.files[0]);
             
             const response = await fetch('/upload', {
@@ -30,21 +39,26 @@ function setupUploadForm() {
             
             const data = await response.json();
             
-            if (data.error) {
-                // Handle duplicate email error specially
+            if (!response.ok || data.error) {
+                // Handle different types of errors
                 if (response.status === 409 && data.existing_candidate_id) {
+                    // Duplicate email error
                     showDuplicateEmailError(messageDiv, data);
                 } else {
-                    showAlert(messageDiv, 'danger', data.error);
+                    // Other errors
+                    showAlert(messageDiv, 'danger', data.error || 'An error occurred while processing the resume');
                 }
             } else {
+                // Success case
                 showSuccessMessage(data);
                 uploadForm.reset();
                 addRecentUpload(data);
             }
         } catch (error) {
-            showAlert(messageDiv, 'danger', error.message || 'Failed to process resume');
+            console.error('Upload error:', error);
+            showAlert(messageDiv, 'danger', error.message || 'Failed to process resume. Please try again.');
         } finally {
+            // Always reset button state
             submitBtn.innerHTML = originalBtnText;
             submitBtn.disabled = false;
         }
@@ -60,6 +74,15 @@ function setupShortlistForm() {
         e.preventDefault();
         const jobDescription = document.getElementById('jobDescription').value;
         const resultDiv = document.getElementById('shortlistResult');
+        const submitBtn = shortlistForm.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        
+        // Clear previous results
+        resultDiv.innerHTML = '';
+        
+        // Show loading state
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+        submitBtn.disabled = true;
         
         try {
             if (!jobDescription.trim()) {
@@ -76,18 +99,34 @@ function setupShortlistForm() {
             
             const data = await response.json();
             
-            if (data.error) {
-                showAlert(resultDiv, 'danger', data.error);
+            if (!response.ok || data.error) {
+                showAlert(resultDiv, 'danger', data.error || 'Failed to shortlist candidates');
             } else {
                 resultDiv.innerHTML = `
                     <div class="alert alert-success">
-                        ${data.message}
-                        <button class="btn btn-sm btn-success ms-2" onclick="window.location.reload()">Refresh</button>
+                        <h4 class="alert-heading">
+                            <i class="bi bi-check-circle-fill me-2"></i>Shortlisting Complete!
+                        </h4>
+                        <p>${data.message}</p>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <button class="btn btn-sm btn-success" onclick="window.location.reload()">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Refresh Page
+                            </button>
+                            <a href="/job_descriptions" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-list-ul me-1"></i>View All Job Descriptions
+                            </a>
+                        </div>
                     </div>
                 `;
             }
         } catch (error) {
+            console.error('Shortlist error:', error);
             showAlert(resultDiv, 'danger', error.message || 'Failed to shortlist candidates');
+        } finally {
+            // Always reset button state
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
         }
     });
 }
@@ -96,8 +135,8 @@ function setupShortlistForm() {
 function showAlert(container, type, message) {
     container.innerHTML = `
         <div class="alert alert-${type} alert-dismissible fade show">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <strong>${type === 'danger' ? 'Error!' : 'Notice:'}</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     `;
 }
@@ -124,7 +163,7 @@ function showDuplicateEmailError(container, data) {
                     </a>
                 </div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     `;
 }
@@ -151,7 +190,7 @@ function showSuccessMessage(data) {
                     <i class="bi bi-upload me-1"></i>Upload Another
                 </button>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     `;
 }
@@ -191,11 +230,6 @@ function addRecentUpload(data) {
     }
 }
 
-// Initialize all event listeners when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    setupUploadForm();
-    setupShortlistForm();
-});
 // Delete functionality using data attributes
 function setupDeleteButtons() {
     document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -212,8 +246,12 @@ function setupDeleteButtons() {
 }
 
 async function deleteItem(type, id, name) {
-    const url = `/${type}/${id}/delete`;
+    const url = type === 'shortlist' 
+        ? `/shortlist/${id}/delete` 
+        : `/${type}/${id}/delete`;
+    
     const btn = document.querySelector(`.delete-btn[data-id="${id}"]`);
+    const originalBtnText = btn.innerHTML;
     
     try {
         // Show loading state
@@ -230,30 +268,30 @@ async function deleteItem(type, id, name) {
         const data = await response.json();
         
         if (data.success) {
-            // Show success message and redirect
+            // Show success message and refresh the appropriate page
             alert(data.message);
             if (type === 'candidate') {
                 window.location.href = '/candidates';
+            } else if (type === 'shortlist') {
+                window.location.reload(); 
             } else {
                 window.location.href = '/job_descriptions';
             }
         } else {
-            // Reset button state
-            btn.innerHTML = 'Delete';
-            btn.disabled = false;
             alert(`Error: ${data.error}`);
         }
     } catch (error) {
-        console.error('Error:', error);
-        btn.innerHTML = 'Delete';
-        btn.disabled = false;
+        console.error('Delete error:', error);
         alert('Failed to delete. Please try again.');
+    } finally {
+        btn.innerHTML = originalBtnText;
+        btn.disabled = false;
     }
 }
 
-// Add to your DOMContentLoaded event listener
+// Initialize all event listeners when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     setupUploadForm();
     setupShortlistForm();
-    setupDeleteButtons();  // Add this line
+    setupDeleteButtons();
 });
